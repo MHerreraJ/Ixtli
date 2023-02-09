@@ -1,5 +1,5 @@
-#ifndef IXTLI_VIEW_TEXT_VIEW_H
-#define IXTLI_VIEW_TEXT_VIEW_H
+#ifndef IXTLI_WIDGET_TEXT_VIEW_H
+#define IXTLI_WIDGET_TEXT_VIEW_H
 
 #include <iostream>
 #include <Ixtli/Graphics/Color.h>
@@ -10,14 +10,19 @@
 namespace Ixtli{
 
 class TextView : public View {
-    private:
+    protected:
         std::string text;
         Paint paint;
+
+        OnTextChangedHandler onTextChanged;
+        void onParentSetTransparencyEventRequest(float transparency) override;
+
     public:
-        TextView() : View(), text(), paint() {}
+        TextView() : View(), text(), paint(), onTextChanged() {}
         virtual ~TextView() {}
 
         void setText(const char* txt);
+
         void setText(const std::string& txt);
 
         inline const std::string& getText() const 
@@ -34,12 +39,16 @@ class TextView : public View {
         inline void setTextThickness(float stroke)
             { paint.setStrokeWidth(stroke); invalidate(); }
         
-
-
+        inline void setOnTextChangedListener(IOnTextChanged listener)
+            { onTextChanged = listener; }
+        
+        inline void setOnTextChangedListener(OnTextChangedListener* listener)
+            { onTextChanged = listener; }
+        
 };
 
 
 };
 
 
-#endif //IXTLI_VIEW_TEXT_VIEW_H
+#endif //IXTLI_WIDGET_TEXT_VIEW_H

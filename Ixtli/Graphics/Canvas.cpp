@@ -52,7 +52,8 @@ void Canvas::drawRect(const RectF& rect, const Paint& paint){
 
 void Canvas::drawRect(const Rect& rect, const Paint& paint){
     glPushMatrix();
-    glColor4ub(paint.color.r(), paint.color.g(), paint.color.b(), paint.color.a());
+    Color c = paint.getColor();
+    glColor4ub(c.r(), c.g(), c.b(), c.a());
     glLineWidth(paint.strokeWidth);
     glBegin(GL_POLYGON);
         glVertex2i(rect.x1, rect.y1); //LEFT TOP CORNER
@@ -67,7 +68,8 @@ void Canvas::drawRect(const Rect& rect, const Paint& paint){
 
 void Canvas::drawRect(float left, float top, float right, float bottom, const Paint& paint){
     glPushMatrix();
-    glColor4ub(paint.color.r(), paint.color.g(), paint.color.b(), paint.color.a());
+    Color c = paint.getColor();
+    glColor4ub(c.r(), c.g(), c.b(), c.a());
     glLineWidth(paint.strokeWidth);
     glBegin(GL_POLYGON);
         glVertex2f(left, top); //LEFT TOP CORNER
@@ -79,10 +81,10 @@ void Canvas::drawRect(float left, float top, float right, float bottom, const Pa
     glPopMatrix();
 }
 
+
 void Canvas::drawText(const std::string& text, float x, float y, const Paint& paint){
     float ratio = paint.textSize / 104.76;
-    auto& color = paint.color;
-    //std::cout << "Draw text " << text << " at " << PointF(x, y) << std::endl;
+    Color color = paint.getColor();
 
     glPushMatrix();
     glLineWidth(paint.strokeWidth);
@@ -94,12 +96,18 @@ void Canvas::drawText(const std::string& text, float x, float y, const Paint& pa
     glPopMatrix();
 }
 
+void Canvas::drawText(const std::string& text, int start, int end, float x, float y, const Paint& paint){
+    if(start < 0 || end < 0 || end < start || text.length() < static_cast<size_t>(end)) return;
+    drawText(text.substr(start, end-start), x, y, paint);
+}
+
+
 void Canvas::drawLine(const PointF& start, const PointF& end, const Paint& paint){
     drawLine(start.x, start.y, end.x, end.y, paint);
 }
 
 void Canvas::drawLine(float startX, float startY, float stopX, float stopY, const Paint& paint){
-    auto color = paint.color;
+    auto color = paint.getColor();
     auto pattern = paint.pathEffect.pattern;
     auto factor = paint.pathEffect.factor;
 

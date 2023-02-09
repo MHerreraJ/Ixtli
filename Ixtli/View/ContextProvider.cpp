@@ -4,6 +4,7 @@
 #include <unordered_map>
 
 #include <GL/freeglut.h>
+#include <Ixtli/View/Context.h>
 #include <Ixtli/Events/MouseEvent.h>
 #include <Ixtli/Events/KeyboardEvent.h>
 #include <Ixtli/View/ContextProvider.h>
@@ -70,7 +71,6 @@ void Ixtli::ContextResizeHandler(int w, int h){
         return;
     }
     tracker[wID]->onWindowResizedEvent(w, h);
-    //glutPostRedisplay();
 }
 
 
@@ -103,7 +103,7 @@ void Ixtli::ContextMouseHandler(int button, int state, int x, int y){
     }
     //wMouseButtonTracker[wID] = btn;
     //wMouseEventTracker[wID] = action;
-
+    
     auto thread = std::thread(&Window::onWindowMouseEvent, tracker[wID], btn, action, x, y);
     thread.detach();
     //tracker[wID]->onWindowMouseEvent(btn, action, x, y);
@@ -125,7 +125,7 @@ void Ixtli::ContextMouseMotionHandler(int x, int y){
     }
 }
 
-void Ixtli::ContextKeyboardHandler(unsigned char key, int x, int y){
+void Ixtli::ContextKeyDownHandler(unsigned char key, int x, int y){
     int wID = glutGetWindow();
     if(tracker.count(wID) < 1) {
         return;
@@ -133,12 +133,56 @@ void Ixtli::ContextKeyboardHandler(unsigned char key, int x, int y){
     tracker[wID]->onWindowKeyPressedEvent(key, KeyAction::KEY_DOWN);
 }
 
-void Ixtli::ContextSpecialKeyHandler(int key, int x, int y){
+void Ixtli::ContextKeyUpHandler(unsigned char key, int x, int y){
+    int wID = glutGetWindow();
+    if(tracker.count(wID) < 1) {
+        return;
+    }
+    tracker[wID]->onWindowKeyPressedEvent(key, KeyAction::KEY_UP);
+}
 
+void Ixtli::ContextSpecialKeyHandler(int key, int x, int y){
+    int wKey = static_cast<int>(Key::NUL);
+    switch(key){
+        case GLUT_KEY_LEFT:
+        case GLUT_KEY_UP:
+        case GLUT_KEY_RIGHT:
+        case GLUT_KEY_DOWN:
+        case GLUT_KEY_HOME:
+        case GLUT_KEY_END:
+            wKey = -static_cast<int>(key);
+        break;
+
+        default: break;
+    }
+
+    int wID = glutGetWindow();
+    if(tracker.count(wID) < 1) {
+        return;
+    }
+    tracker[wID]->onWindowKeyPressedEvent(wKey, KeyAction::KEY_DOWN);
 }
 
 void Ixtli::ContextSpecialKeyUpHandler(int key, int x, int y){
+    int wKey = static_cast<int>(Key::NUL);
+    switch(key){
+        case GLUT_KEY_LEFT:
+        case GLUT_KEY_UP:
+        case GLUT_KEY_RIGHT:
+        case GLUT_KEY_DOWN:
+        case GLUT_KEY_HOME:
+        case GLUT_KEY_END:
+            wKey = -static_cast<int>(key);
+        break;
 
+        default: break;
+    }
+
+    int wID = glutGetWindow();
+    if(tracker.count(wID) < 1) {
+        return;
+    }
+    tracker[wID]->onWindowKeyPressedEvent(wKey, KeyAction::KEY_UP);
 }
 
 void Ixtli::ContextCloseHandler(){
@@ -176,7 +220,8 @@ void ContextProvider::windowContextCreate(std::shared_ptr<Window> win, int w, in
     glutReshapeFunc(ContextResizeHandler);
     glutMouseFunc(ContextMouseHandler);
     glutMotionFunc(ContextMouseMotionHandler);
-    glutKeyboardFunc(ContextKeyboardHandler);
+    glutKeyboardFunc(ContextKeyDownHandler);
+    glutKeyboardUpFunc(ContextKeyUpHandler);
     glutSpecialFunc(ContextSpecialKeyHandler);
     glutSpecialUpFunc(ContextSpecialKeyUpHandler);
     glutCloseFunc(ContextCloseHandler);
@@ -188,7 +233,7 @@ void ContextProvider::windowContextCreate(std::shared_ptr<Window> win, int w, in
     win->width = w;
     win->height = h;
     win->title = title;
-    win->id = winID;
+    dynamic_cast<Context*>(win.get())->contextID = winID;
     tracker[winID] = win;
     win->onCreate();
 }

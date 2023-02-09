@@ -8,16 +8,32 @@
 
 namespace Ixtli{
 
-struct Paint{
+class Paint{
+private:
+    Color realColor;
     Color color;
+public:
     float strokeWidth;
     float textSize;
+    float transparency;
     PathEffect pathEffect;
 
-    Paint():color(Color::BLACK), strokeWidth(1), textSize(10), pathEffect() {}
+    Paint(): realColor(Color::TRANSPARENT), color(Color::TRANSPARENT), strokeWidth(1), textSize(10), transparency(1.0), pathEffect() {}
 
-    inline Paint& setColor(const Color& c)
-        { color = c; return *this; }
+    inline Paint& setColor(const Color& c) { 
+        realColor = c; 
+        color = c; 
+        auto alpha = min(255U, (unsigned int)(255.0f*(min(1.0f, max(0.0f, c.a_f() * transparency)))));
+        color.setAlpha(alpha); 
+        return *this; 
+    }
+    
+    inline Paint& setTransparency(float t) { 
+        transparency = max(0.0f, min(t, 1.0f)); 
+        auto alpha = min(255U, (unsigned int)(255.0f*(min(1.0f, max(0.0f, realColor.a_f() * transparency)))));
+        color.setAlpha(alpha); 
+        return *this; 
+    }
     
     inline Paint& setStrokeWidth(float w)
         { strokeWidth = w; return *this; }
@@ -27,6 +43,13 @@ struct Paint{
 
     inline Paint& setPathEffect(const PathEffect& p)
         { pathEffect = p; return *this; }
+    
+    inline const Color& getRealColor() const
+        { return realColor; }
+    
+    inline const Color& getColor() const{
+        return color;
+    }
 
     
     inline void getTextBounds(const std::string& text, int start, int end, Rect& bounds) const{
@@ -41,7 +64,7 @@ struct Paint{
 };
 
 inline std::ostream& operator << (std::ostream& os, const Paint& p){
-    os << "(color: " << p.color << ", strokeWidth: " << p.strokeWidth 
+    os << "(color: " << p.getRealColor() << ", strokeWidth: " << p.strokeWidth 
         << ", textSize: " << p.textSize << ", pathEffect: " << p.pathEffect << ")";
     return os;
 }

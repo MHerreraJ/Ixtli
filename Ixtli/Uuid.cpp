@@ -26,11 +26,11 @@ UUID::UUID(Source source){
     while(readed + sizeof(id) <= sizeof(uid)){
         std::memcpy(&a, ptr + readed, sizeof(id));
         readed += sizeof(id);
-        id += a;
+        id ^= ~a;
     }
     if(readed < sizeof(uid)){
         a = 0;
         std::memcpy(&a, ptr + readed, sizeof(uid) - readed);
-        id += a;
+        id ^= ~a;
     }
 }

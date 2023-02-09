@@ -7,9 +7,9 @@
 
 using namespace Ixtli;
 
-View::View() : mutexView(), mutexDraw(), mutexEventMouse(), parent(nullptr), windowContext(nullptr), viewport(), 
+View::View() : mutexDraw(), mutexEventMouse(), parent(nullptr), context(nullptr), viewport(), 
     orderedChilds(), childs(), width(0), height(0), updateLayout(false), layoutParams(), background(), 
-    clickListener() {
+    clickListener(), focusListener() {
         
     id = UUID::create();
 }
@@ -47,14 +47,28 @@ void View::updateViewport(const Viewport& v){
     viewport = Viewport(left, bottom, w, h);
 }
 
+void View::onParentSetTransparencyEventRequest(float transparency){
+    background->setTransparency(transparency);
+    for(auto childID = orderedChilds.rbegin(); childID != orderedChilds.rend(); childID++){
+        if(childs.count(*childID) == 0) continue;
+        auto childView = childs[*childID];
+        
+        childView->onParentSetTransparencyEventRequest(transparency);
+    }
+}
+
+void View::onParentFocusChangeEventRequest(bool hasFocus){
+    onFocusChanged(hasFocus);
+    focusListener(this, hasFocus);
+}
+
+
 void View::onParentDrawEventRequest(const Viewport& pvp){
-    mutexDraw.lock();
+    mutexDraw.lock();    
     if(updateLayout){
         onParentResizeEventRequest(pvp.width(), pvp.height());
         updateLayout = false;
     }
-
-    //std::cout << __LINE__ << " DRAWING " << getID() << std::endl;
 
     if(width == 0 || height == 0 || !isInParentViewport(pvp)){
         mutexDraw.unlock();
@@ -105,16 +119,13 @@ void View::onParentResizeEventRequest(int parentWidth, int parentHeight){
     for(auto& child : childs){
         child.second->onParentResizeEventRequest(width, height);
     }
+    invalidate();
 }
 
 bool View::onParentMouseEventRequest(MouseButton btn, MouseAction action, int x, int y){
     if(!mutexEventMouse.try_lock()) {
         return false;
     }
-    /*if(!mutexDraw.try_lock()) {
-        mutexEventMouse.unlock();
-        return false;
-    }*/
     mutexDraw.lock();
     
     bool handleClickListener = true; 
@@ -123,18 +134,19 @@ bool View::onParentMouseEventRequest(MouseButton btn, MouseAction action, int x,
         auto childView = childs[*childID];
         if(childView->onParentMouseEventRequest(btn, action, x, y)){
             handleClickListener = false;
+            break;
         }
     }
 
-   
-    if(viewport.contains(Point(x, y))){        
-        onMouseEvent(btn, action, x,  height - y);
+    if(viewport.contains(Point(x, y)) && handleClickListener){
+        int mapY =  viewport.top - y;
+        int mapX = x - viewport.left;
+
+        onMouseEvent(btn, action, mapX,  mapY);
         if(handleClickListener && action == MouseAction::PRESSED_DOWN){
-            if(clickListener){
-                clickListener(this, btn, x, y);
-            }
-            if(windowContext){
-                windowContext->setFocus(getID());
+            clickListener(this, btn, mapX, mapY);
+            if(context){
+                context->requestFocus(getID());
             }
         }
         handleClickListener = true;
@@ -151,6 +163,13 @@ void View::onParentKeyboardEventRequest(int key, KeyAction action){
     onKeyEvent(key, action);
 }
 
+bool View::hasFocus() const {
+    if(!context){
+        return false;
+    }
+    return context->hasFocus(getID());
+}
+
 void View::setBackgroundColor(const Color& c){
     background = std::shared_ptr<Drawable>(new ColorDrawable(c));
     invalidate();
@@ -161,7 +180,6 @@ void View::setWidth(int w){
         layoutParams.setWidth(LayoutParams::WRAP_CONTENT);
     }
     width = w;
-    //updateViewport();
     updateLayout = true;
     invalidate();
 }
@@ -172,7 +190,6 @@ void View::setHeight(int h){
     }
     height = h;
     updateLayout = true;
-    //updateViewport();
     invalidate();
 }
 
@@ -182,29 +199,33 @@ void View::setLayoutParams(const MarginLayoutParams& margins){
     invalidate();
 }
 
+void View::setTransparency(float transparency){
+    onParentSetTransparencyEventRequest(transparency);
+    invalidate();
+}
+
 
 bool View::addView(const std::shared_ptr<View>& v){
     bool added = false;
     do{
         if(!v || (v->parent && (v->parent != this)) || v->id == UUID::UUID_NONE ) break;
         v->parent = this;
-        v->windowContext = windowContext;
+        v->context = context;
         v->updateLayout = true;
 
         childs[v->id] = v;
         orderedChilds.push_back(v->id);
         added = true;
         
-        if(windowContext){
-            windowContext->setFocus(v->getID());
-        }
-        bool focusable = false;
-        v->onViewCreated(focusable);
-
-        if(focusable && windowContext){
-            windowContext->addToFocusableViews(v->getID());
+        if(context){
+            context->requestFocus(v->getID());
         }
 
+        if(v->acceptsKeyboardInput() && context){
+            context->registerKeyboardInputView(v->getID());
+        }
+
+        v->onAttachedToWindow();
         invalidate();
     }while(0);
     return added;
@@ -224,12 +245,11 @@ std::shared_ptr<View> View::findViewByID(UUID i) const {
 }
 
 void View::invalidate(){
-    if(windowContext){
-        windowContext->invalidate();
+    if(context){
+        context->invalidate();
     }
 }
 
 void View::onDraw(Canvas& canvas){
-    background->setBounds(Rect(0, 0, width, height));
-    background->draw(canvas);
+
 }

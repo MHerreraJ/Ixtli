@@ -28,6 +28,7 @@ class Canvas{
         virtual void drawRect(float left, float top, float right, float bottom, const Paint& paint);
 
         virtual void drawText(const std::string& text, float x, float y, const Paint& paint);
+        virtual void drawText(const std::string& text, int start, int end, float x, float y, const Paint& paint);
 
         virtual void drawLine(const PointF& start, const PointF& end, const Paint& paint);
         virtual void drawLine(float startX, float startY, float stopX, float stopY, const Paint& paint);

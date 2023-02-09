@@ -30,7 +30,7 @@ using Viewport = Viewport2D<int>;
 
 template <typename N>
 inline std::ostream& operator << (std::ostream& os, const Viewport2D<N>& v){
-    std::cout << "(x0: " << v.left << ", y0: " << v.bottom << ", w: " << v.width() << ", h: " << v.height() << ")";
+    os << "(x0: " << v.left << ", y0: " << v.bottom << ", w: " << v.width() << ", h: " << v.height() << ")";
     return os;
 }
 

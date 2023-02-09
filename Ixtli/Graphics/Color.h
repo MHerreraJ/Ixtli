@@ -62,7 +62,7 @@ class Color{
 
         inline Color& setAlpha(unsigned int a)
             { color &= (~MASK_ALPHA);  color |= (a&0xFF) << 24; return *this; }
-
+        
         inline Color& setR(unsigned int r)
             { color &= (~MASK_RED);  color |= (r&0xFF) << 16; return *this; }
         
@@ -176,7 +176,7 @@ inline Color operator *(double p, const Color& c){
 }
 
 inline std::ostream& operator << (std::ostream& os, const Color& c){
-    os << "rgb: (" << c.r() << "," << c.g() << "," << c.b() << ")";
+    os << "argb: (" << c.a() << "," << c.r() << "," << c.g() << "," << c.b() << ")";
     return os;
 }
 

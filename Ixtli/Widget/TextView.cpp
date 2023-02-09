@@ -3,14 +3,20 @@
 
 #include <Ixtli/Graphics/Rectangle.h>
 #include <Ixtli/Graphics/Paint.h>
-#include <Ixtli/View/TextView.h>
+#include <Ixtli/Widget/TextView.h>
 
 
 using namespace Ixtli;
 
+void TextView::onParentSetTransparencyEventRequest(float transparency){
+    getBackground()->setTransparency(transparency);
+    paint.setTransparency(transparency);
+}
 
 void TextView::setText(const char* txt){
+    std::string before = text;
     text = txt;
+    onTextChanged(this, before, text);
     invalidate();
 }
 

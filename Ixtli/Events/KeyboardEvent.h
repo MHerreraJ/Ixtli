@@ -13,9 +13,21 @@ enum class Key : int {
     BACKSPACE = 8,
     TAB = 9,
     ENTER = 10,
+    CARRY_RETURN = 13,
     ESCAPE= 27,
     SPACE = 32,
+    DEL = 127,
+    LEFT = -0x64,
+    UP = -0x65,
+    RIGHT = -0x66,
+    DOWN = -0x67,
+    HOME = -0x6A,
+    END = -0x6B
 };
+
+inline bool isSpecialKey(int k){
+    return k < 0;
+}
 
 enum class KeyAction{
     KEY_DOWN,
@@ -39,8 +51,6 @@ inline bool operator != (Key eKey, int key)
 inline bool operator != (int key, Key eKey)
     { return static_cast<int>(eKey) != key; }
 
-
-};
 
 using IOnTextChanged = std::function<void(View*, const std::string&, const std::string&)>;
 
@@ -78,5 +88,6 @@ public:
     }
 };
 
+};
 
 #endif // IXTLI_EVENTS_KEYBOARD_EVENT_H

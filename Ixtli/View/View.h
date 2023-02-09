@@ -9,9 +9,10 @@
 
 #include <Ixtli/Uuid.h>
 #include <Ixtli/Core/Types.h>
+#include <Ixtli/Events/ViewEvent.h>
 #include <Ixtli/Events/MouseEvent.h>
 #include <Ixtli/Events/KeyboardEvent.h>
-#include <Ixtli/View/Viewport2D.h>
+#include <Ixtli/View/Viewport.h>
 #include <Ixtli/Graphics/Color.h>
 #include <Ixtli/Graphics/Drawable.h>
 #include <Ixtli/Graphics/ColorDrawable.h>
@@ -21,20 +22,17 @@
 namespace Ixtli{
 
 class Window;
-class View;
-
-
+class Context;
 
 class View : MouseEvent, KeyboardEvent {
     friend class Window;
     private:
         UUID id;
-        Mutex mutexView;
         Mutex mutexDraw;
         Mutex mutexEventMouse;
 
         View* parent;
-        Window* windowContext;
+        Window* context;
         Viewport viewport;
 
         std::vector<UUID> orderedChilds;
@@ -51,6 +49,7 @@ class View : MouseEvent, KeyboardEvent {
         void updateViewport();
         void updateViewport(const Viewport& vp);
 
+        void onParentFocusChangeEventRequest(bool hasFocus);
         void onParentDrawEventRequest(const Viewport& vp);
         void onParentResizeEventRequest(int parentWidth, int parentHeight);
         bool onParentMouseEventRequest(MouseButton btn, MouseAction action, int x, int y);
@@ -58,9 +57,11 @@ class View : MouseEvent, KeyboardEvent {
 
 
         OnClickListenerHandler clickListener;
+        OnFocusChangeHandler focusListener;
 
     protected:
-        virtual void onViewCreated(bool& textFocusable){ textFocusable = false; }
+        virtual void onParentSetTransparencyEventRequest(float transparency);
+        virtual void onAttachedToWindow(){}
 
     public:
         View();
@@ -76,6 +77,14 @@ class View : MouseEvent, KeyboardEvent {
         inline const std::shared_ptr<Drawable> getBackground() const
             { return background; }            
 
+        inline Context* getContext() const
+            { return (Context*)(context); }
+
+        bool hasFocus() const;
+
+        inline virtual bool acceptsKeyboardInput() const
+            { return false; }
+
         inline int getWidth() const
             { return width; }
         
@@ -87,11 +96,18 @@ class View : MouseEvent, KeyboardEvent {
         
         inline void setOnClickListener(OnClickListener* listener)
             { clickListener = listener; }
+        
+        inline void setOnFocusChangeListener(IOnFocusChangeListener listener)
+            { focusListener = listener; }
+        
+        inline void setOnFocusChangeListener(OnFocusChangeListener* listener)
+            { focusListener = listener; }
 
         void setBackgroundColor(const Color& c);
         void setWidth(int w);
         void setHeight(int h);
         void setLayoutParams(const MarginLayoutParams& margins);
+        void setTransparency(float transparency);
 
         template <class V>
         inline bool addView(const std::shared_ptr<V>& v)
@@ -110,14 +126,14 @@ class View : MouseEvent, KeyboardEvent {
         
         virtual void onDraw(Canvas& canvas);
         virtual void onSizeChanged(int w, int h, int oldw, int oldh){}
-        virtual void onKeyPressed(int key){}
+        virtual void onFocusChanged(bool gainFocus) {};
 
         virtual void onKeyEvent(int key, KeyAction action) override {}
         virtual void onMouseEvent(MouseButton btn, MouseAction action, int x, int y) override {}
 };
 
 inline std::ostream& operator << (std::ostream& os, const View& v){
-    os << "<View: " << v.getID() << ">" << std::endl;
+    os << "<View: " << v.getID() << ">";
     return os;
 }
 

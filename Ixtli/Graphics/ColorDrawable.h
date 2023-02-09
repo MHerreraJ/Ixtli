@@ -16,9 +16,12 @@ public:
 
     inline void setColor(Color c) 
         { paint.setColor(c); }
+    
+    virtual inline void setTransparency(float t)
+            { Drawable::setTransparency(t); paint.setTransparency(t); }
 
     void draw(Canvas& canvas) override
-        {  canvas.drawRect(getBounds(), paint); }
+        { canvas.drawRect(getBounds(), paint); }
     
 
 };
