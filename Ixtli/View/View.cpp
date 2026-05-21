@@ -48,7 +48,9 @@ void View::updateViewport(const Viewport& v){
 }
 
 void View::onParentSetTransparencyEventRequest(float transparency){
-    background->setTransparency(transparency);
+    if(background){
+        background->setTransparency(transparency);
+    }
     for(auto childID = orderedChilds.rbegin(); childID != orderedChilds.rend(); childID++){
         if(childs.count(*childID) == 0) continue;
         auto childView = childs[*childID];
@@ -83,8 +85,10 @@ void View::onParentDrawEventRequest(const Viewport& pvp){
     glMatrixMode(GL_MODELVIEW);
 
     glPushMatrix();
-    background->setBounds(Rect(0, 0, width, height));
-    background->draw(surface);
+    if(background){
+        background->setBounds(Rect(0, 0, width, height));
+        background->draw(surface);
+    }
     onDraw(surface);
 
     for(auto& viewID : orderedChilds){
@@ -138,7 +142,7 @@ bool View::onParentMouseEventRequest(MouseButton btn, MouseAction action, int x,
         }
     }
 
-    if(viewport.contains(Point(x, y)) && handleClickListener){
+    if((viewport.contains(Point(x, y)) && handleClickListener)){
         int mapY =  viewport.top - y;
         int mapX = x - viewport.left;
 
@@ -151,6 +155,11 @@ bool View::onParentMouseEventRequest(MouseButton btn, MouseAction action, int x,
         }
         handleClickListener = true;
     }else{
+        if(hasFocus()){
+            int mapY =  viewport.top - y;
+            int mapX = x - viewport.left;
+            onMouseEvent(btn, action, mapX,  mapY);
+        }
         handleClickListener = false;
     }
 
@@ -161,6 +170,12 @@ bool View::onParentMouseEventRequest(MouseButton btn, MouseAction action, int x,
 
 void View::onParentKeyboardEventRequest(int key, KeyAction action){
     onKeyEvent(key, action);
+}
+
+void View::unfocus(){
+    if(context){
+        context->unfocus();
+    }
 }
 
 bool View::hasFocus() const {

@@ -2,7 +2,9 @@
 #define IXTLI_WIDGET_EDIT_TEXT_H
 
 #include <iostream>
+#include <unordered_set>
 #include <Ixtli/Core/Types.h>
+#include <Ixtli/Core/IxtliTime.h>
 #include <Ixtli/Events/KeyboardEvent.h>
 #include <Ixtli/Graphics/Paint.h>
 #include <Ixtli/Graphics/Canvas.h>
@@ -16,6 +18,10 @@ class EditText : public TextView {
         size_t x1TextViewport;
         size_t x2TextViewport;
         Mutex scrollMutex;
+        time_s lastMouseScroll;
+        time_s lastCursorBlink;
+
+        Ixtli::OnKeyEventHandler keyEventListener;
 
         bool visibleCursor;
         bool runThreads;
@@ -46,6 +52,14 @@ class EditText : public TextView {
         void onSizeChanged(int w, int h, int oldw, int oldh) override;
 
         void onFocusChanged(bool gainFocus) override;
+
+        void registerOnKeyEventListener(Ixtli::OnKeyEventHandler listener);
+
+        void setText(const char* txt) override;
+
+        void setText(const std::string& txt) override{
+            setText(txt.c_str());
+        }
 
 };
 

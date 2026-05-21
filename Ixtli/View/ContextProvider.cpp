@@ -4,6 +4,7 @@
 #include <unordered_map>
 
 #include <GL/freeglut.h>
+#include <Ixtli/Core/IxtliTime.h>
 #include <Ixtli/View/Context.h>
 #include <Ixtli/Events/MouseEvent.h>
 #include <Ixtli/Events/KeyboardEvent.h>
@@ -11,10 +12,6 @@
 
 using namespace Ixtli;
 
-static std::mutex glMutex;
-static std::mutex mouseMutex;
-
-static std::mutex trackerMutex;
 
 static ContextProvider* contextProvider = nullptr;
 static std::unordered_map<int, std::shared_ptr<Window>> tracker;
@@ -25,8 +22,8 @@ ContextProvider* ContextProvider::getProvider(){
         int argc = 0;
         char** argv = nullptr;
         glutInit(&argc, argv);
-        //glutSetOption(GLUT_MULTISAMPLE, 8);
-        glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
+        glutSetOption(GLUT_MULTISAMPLE, 8);
+        glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB | GLUT_MULTISAMPLE);
 
         contextProvider = new ContextProvider();
     }
@@ -52,12 +49,11 @@ void Ixtli::ContextDisplayHandler(){
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_MULTISAMPLE);
 
     glEnable(GL_LINE_SMOOTH);
-    glEnable(GL_POLYGON_SMOOTH);
-
     glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
-    glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
+    glDisable(GL_POLYGON_SMOOTH);
 
     tracker[wID]->onWindowReshapeEvent();
 
@@ -111,7 +107,6 @@ void Ixtli::ContextMouseHandler(int button, int state, int x, int y){
 }
 
 void Ixtli::ContextMouseMotionHandler(int x, int y){
-    if(mouseMutex.try_lock()){
         int wID = glutGetWindow();
         if(tracker.count(wID) < 1) {
             return;
@@ -121,8 +116,6 @@ void Ixtli::ContextMouseMotionHandler(int x, int y){
         thread.detach();
         //tracker[wID]->onWindowMouseEvent(button, MouseAction::MOVE, x, y);
         //glutPostRedisplay();
-        mouseMutex.unlock();
-    }
 }
 
 void Ixtli::ContextKeyDownHandler(unsigned char key, int x, int y){
@@ -150,10 +143,15 @@ void Ixtli::ContextSpecialKeyHandler(int key, int x, int y){
         case GLUT_KEY_DOWN:
         case GLUT_KEY_HOME:
         case GLUT_KEY_END:
-            wKey = -static_cast<int>(key);
+        wKey = -static_cast<int>(key);
+        break;
+        case GLUT_KEY_SHIFT_L:
+        wKey = static_cast<int>(Key::SHIFT);
         break;
 
-        default: break;
+        default: 
+            // std::cout << "Special key pressed: " << key << std::endl;
+        break;
     }
 
     int wID = glutGetWindow();
@@ -196,15 +194,22 @@ void Ixtli::ContextCloseHandler(){
 }
 
 void Ixtli::ContextIdleHandler(){
-    trackerMutex.lock();
-    for(auto& id : windowUpdateRequest){
-        if(tracker.count(id) > 0){
-            glutPostWindowRedisplay(id);
+    // static time_s lastTime = getTime();
+    // time_s now = getTime();
+
+    // if(timeDiff_ms<long long int>(lastTime, now) < 10){
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+        // return;
+    // }
+    if(windowUpdateRequest.size() > 0){
+        for(auto& id : windowUpdateRequest){
+            if(tracker.count(id) > 0){
+                glutPostWindowRedisplay(id);
+            }
         }
+        windowUpdateRequest.clear();
     }
-    windowUpdateRequest.clear();
-    trackerMutex.unlock();
-    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    // lastTime = getTime();
 }
 
 void ContextProvider::windowContextCreate(std::shared_ptr<Window> win, int w, int h, const Point& pos, const std::string& title){
@@ -240,10 +245,8 @@ void ContextProvider::windowContextCreate(std::shared_ptr<Window> win, int w, in
 
 void ContextProvider::windowInvalidate(int wID){
     if(tracker.count(wID) > 0){
-        trackerMutex.lock();
         if(windowUpdateRequest.count(wID) == 0){
             windowUpdateRequest.insert(wID);
         }
-        trackerMutex.unlock();
     }
 }

@@ -3,6 +3,7 @@
 
 #include <mutex>
 #include <memory>
+#include <vector>
 #include <Ixtli/Core/Types.h>
 #include <Ixtli/Graphics/Paint.h>
 #include <Ixtli/Graphics/Rectangle.h>
@@ -32,6 +33,12 @@ class Canvas{
 
         virtual void drawLine(const PointF& start, const PointF& end, const Paint& paint);
         virtual void drawLine(float startX, float startY, float stopX, float stopY, const Paint& paint);
+
+        virtual void drawPoint(float x, float y, const Paint& paint);
+        virtual void drawPoints(const std::vector<float>& points, const Paint& paint);
+
+        virtual void drawCircle(const PointF& center, float radius, const Paint& paint);
+        virtual void drawCircle(float x, float y, float radius, const Paint& paint);
 
 };
 

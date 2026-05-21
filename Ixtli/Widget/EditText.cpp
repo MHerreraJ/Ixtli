@@ -6,6 +6,7 @@
 using namespace Ixtli;
 
 EditText::EditText() : TextView(), cursor(0), x1TextViewport(0), x2TextViewport(0), scrollMutex(),
+    lastMouseScroll(getTime()), lastCursorBlink(getTime()),
     visibleCursor(false), runThreads(true), runningCursorThread(false),
     screenChars(0), screenOffset(0){
     
@@ -26,12 +27,19 @@ void EditText::onAttachedToWindow(){
 void EditText::onDraw(Canvas& c){
     Rect bounds{};
     paint.getTextBounds(text, x1TextViewport, x2TextViewport, bounds);
-    //c.drawText(text, 0.5*bounds.height(), 0.5f*(getHeight() - bounds.height()), paint);
-    c.drawText(text, x1TextViewport, x2TextViewport, 0.5*bounds.height(), 0.5f*(getHeight() - bounds.height()), paint);
+
+    float textOffsetX = 0.5f * bounds.height();
+    float textOffsetY = 0.5f * (getHeight() - bounds.height());
+
+    c.drawText(text, x1TextViewport, x2TextViewport, textOffsetX, textOffsetY, paint);
     if(visibleCursor && hasFocus()){
         Rect cursorBounds{};
         paint.getTextBounds(text, x1TextViewport, cursor, cursorBounds);
-        c.drawLine(cursorBounds.x2 + 10, 4, cursorBounds.x2 + 10, getHeight()-4, Paint().setColor(Color(Color::RED).setAlpha(170)).setStrokeWidth(3));
+
+        float cursorX = textOffsetX + cursorBounds.x2 + 1.0f;
+        float cursorTop = textOffsetY + 1.0f;
+        float cursorBottom = getHeight() - textOffsetY/2;
+        c.drawLine(cursorX, cursorTop, cursorX, cursorBottom, Paint().setColor(Color(Color::RED)).setStrokeWidth(1.5f));
     }
 }
 
@@ -45,9 +53,9 @@ void EditText::updateTextViewport(){
         x2TextViewport = cursor;
         if(x2TextViewport < text.length()){
             x2TextViewport++;
-            if(x1TextViewport < text.length()){
-                x1TextViewport ++;
-            }
+            // if(x1TextViewport < text.length()){
+            //     x1TextViewport ++;
+            // }
         }
         paint.getTextBounds(text, x1TextViewport, x2TextViewport, bounds);
         while(bounds.x2 + 15 > getWidth()){
@@ -84,6 +92,14 @@ void EditText::updateTextViewport(){
 
 
 void EditText::onKeyEvent(int key, KeyAction action){
+    if(!hasFocus()){
+        std::cout << "No tiene foco" << std::endl;
+        return;
+    }
+    if(keyEventListener && keyEventListener(this, key, action)){
+        return;
+    }
+
     if(action != KeyAction::KEY_DOWN) return;
 
     bool triggerEvent = false;
@@ -145,16 +161,23 @@ void EditText::onKeyEvent(int key, KeyAction action){
 }
 
 void EditText::onMouseEvent(MouseButton btn, MouseAction action, int x, int y){
+    (void)y;
     if(btn == MouseButton::MIDDLE){
-        if(scrollMutex.try_lock()){
-            std::this_thread::sleep_for(std::chrono::milliseconds(3));
+        // if(scrollMutex.try_lock()){
+            time_s now = getTime();
+            auto dt = timeDiff_ms<long long int>(lastMouseScroll, now);
+            if(dt < 3){
+                // scrollMutex.unlock();
+                return;
+            }
+            lastMouseScroll = now;
             if(action == MouseAction::SCROLL_UP){
                 onKeyEvent(static_cast<int>(Key::LEFT), KeyAction::KEY_DOWN);
             }else if(action == MouseAction::SCROLL_DOWN){
                 onKeyEvent(static_cast<int>(Key::RIGHT), KeyAction::KEY_DOWN);
             }
-            scrollMutex.unlock();
-        }
+            // scrollMutex.unlock();
+        // }
         return;
     }
     if(btn != MouseButton::LEFT || action != MouseAction::PRESSED_DOWN) return;
@@ -163,12 +186,16 @@ void EditText::onMouseEvent(MouseButton btn, MouseAction action, int x, int y){
     Rect bounds;
     paint.getTextBounds(text, x1TextViewport, x2TextViewport, bounds);
 
-    if(x >= bounds.x2){
-        //pos = text.length();
+    float textOffsetX = 0.5f * bounds.height();
+    float localX = x - textOffsetX;
+
+    if(localX <= 0){
+        pos = x1TextViewport;
+    }else if(localX >= bounds.x2){
         pos = x2TextViewport;
     }else{
         paint.getTextBounds(text, x1TextViewport, pos, bounds);
-        while(x > bounds.x2){
+        while(localX > bounds.x2){
             pos ++;
             paint.getTextBounds(text, x1TextViewport, pos, bounds);   
 
@@ -225,15 +252,29 @@ void EditText::onFocusChanged(bool gainFocus){
 void EditText::cursorThread(){
     runningCursorThread = true;
     while(runThreads){
-        if(visibleCursor){
-            std::this_thread::sleep_for(std::chrono::milliseconds(600));
-            visibleCursor = false;
-        }else{
-            std::this_thread::sleep_for(std::chrono::milliseconds(400));
-            visibleCursor = true;
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        if(!hasFocus()) continue;
+
+        auto dt = timeDiff_ms<long long int>(lastCursorBlink, getTime());
+        if((visibleCursor && dt < 600) || (!visibleCursor && dt < 400)){
+            continue;
         }
-        if(hasFocus())
-            invalidate();
+
+        visibleCursor = !visibleCursor;
+        invalidate();
+        lastCursorBlink = getTime();
     }
     runningCursorThread = false;
+}
+
+void EditText::registerOnKeyEventListener(Ixtli::OnKeyEventHandler listener)
+{
+    keyEventListener = listener;
+}
+
+void EditText::setText(const char* txt){
+    cursor = 0;
+    x1TextViewport = 0;
+    x2TextViewport = 0;
+    TextView::setText(txt);
 }

@@ -21,9 +21,9 @@ class TextView : public View {
         TextView() : View(), text(), paint(), onTextChanged() {}
         virtual ~TextView() {}
 
-        void setText(const char* txt);
+        virtual void setText(const char* txt);
 
-        void setText(const std::string& txt);
+        virtual void setText(const std::string& txt);
 
         inline const std::string& getText() const 
             { return text; }
@@ -38,6 +38,9 @@ class TextView : public View {
         
         inline void setTextThickness(float stroke)
             { paint.setStrokeWidth(stroke); invalidate(); }
+        
+        inline Paint& getTextPaint()
+            { return paint; }
         
         inline void setOnTextChangedListener(IOnTextChanged listener)
             { onTextChanged = listener; }

@@ -8,6 +8,7 @@
 #include <Ixtli/View/Context.h>
 #include <Ixtli/View/View.h>
 #include <Ixtli/Core/Types.h>
+#include <Ixtli/Core/IxtliTime.h>
 #include <Ixtli/Graphics/Point2D.h>
 
 namespace Ixtli{
@@ -39,6 +40,8 @@ class Window : public Context{
         std::shared_ptr<View> toastView;
         std::queue<std::pair<Toast, size_t>> messageQueue;
         bool pendingInvalidate;
+        time_s lastToastTime;
+        int toastFSM;
         
         void toastDisplayThread();
 
@@ -54,6 +57,8 @@ class Window : public Context{
         Window();
         virtual ~Window() {} 
 
+        std::size_t getToastCount() const
+            { return messageQueue.size(); }
         void notify(Toast* toast) override ;
 
         inline int getWidth() const
@@ -83,6 +88,8 @@ class Window : public Context{
 
         bool hasFocus(UUID viewID) const
             { if(viewID == UUID::UUID_NONE) return false; return viewID == focusedViewID; }
+
+        void unfocus();
 
         void requestFocus(UUID viewID);
         void registerKeyboardInputView(UUID viewID);

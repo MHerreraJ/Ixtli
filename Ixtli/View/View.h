@@ -80,6 +80,8 @@ class View : MouseEvent, KeyboardEvent {
         inline Context* getContext() const
             { return (Context*)(context); }
 
+        void unfocus();
+        
         bool hasFocus() const;
 
         inline virtual bool acceptsKeyboardInput() const

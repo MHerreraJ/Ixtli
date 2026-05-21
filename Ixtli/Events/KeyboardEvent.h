@@ -17,6 +17,7 @@ enum class Key : int {
     ESCAPE= 27,
     SPACE = 32,
     DEL = 127,
+    SHIFT=-0x0070,
     LEFT = -0x64,
     UP = -0x65,
     RIGHT = -0x66,
@@ -50,6 +51,44 @@ inline bool operator != (Key eKey, int key)
 
 inline bool operator != (int key, Key eKey)
     { return static_cast<int>(eKey) != key; }
+
+
+using IOnKeyEvent = std::function<bool(View*v, int, KeyAction)>;
+class OnKeyEventListener{
+public:
+    virtual bool onKeyEvent(View* v, int key, KeyAction action) = 0;
+};
+
+class OnKeyEventHandler{
+public:    
+    enum Handler { NONE, FUNCTION_PTR, INTERFACE };
+private:    
+    Handler handler;
+    IOnKeyEvent fnPtr;
+    OnKeyEventListener* ifPtr;
+public:    OnKeyEventHandler():handler(NONE), fnPtr(nullptr), ifPtr(nullptr) {}
+    OnKeyEventHandler(IOnKeyEvent fnPtr) : handler(fnPtr != nullptr ? FUNCTION_PTR : NONE), fnPtr(fnPtr), ifPtr(nullptr){}
+    OnKeyEventHandler(OnKeyEventListener* interface) : handler(interface != nullptr ? INTERFACE : NONE), fnPtr(nullptr), ifPtr(interface){}
+
+    inline explicit operator bool() const
+        { return handler != NONE; }
+    
+    inline bool operator()(View* v, int key, KeyAction action){ 
+        switch (handler){
+            case FUNCTION_PTR:{
+                return fnPtr(v, key, action); 
+            }break;
+            case INTERFACE:{
+                return ifPtr->onKeyEvent(v, key, action); 
+            }break;
+            default: break;
+        }
+        return false;
+    }
+
+    inline bool operator == (const OnKeyEventHandler& other) const
+        { return handler == other.handler && fnPtr.target_type() == other.fnPtr.target_type() && ifPtr == other.ifPtr; }
+};
 
 
 using IOnTextChanged = std::function<void(View*, const std::string&, const std::string&)>;

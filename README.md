@@ -3,7 +3,7 @@
 ## Description
 Ixtli is a C++ library based in GL and freeglut for creating and managing simple window UI's in linux.
 
-Takes inspiration from the Android™ view library
+Takes inspiration from the Android™ view/graphics/widget libraries
 
 
 ## License
